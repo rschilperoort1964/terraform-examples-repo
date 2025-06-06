@@ -20,3 +20,17 @@ module "storage_account_two" {
   account_tier             = "Standard"
   account_replication_type = "LRS"
 }
+
+module "keyvault" {
+  source              = "./modules/keyvault"
+  keyvault_name       = var.keyvault_name
+  resource_group_name = azurerm_resource_group.rg.name
+  location            = var.location
+  tenant_id           = var.tenant_id
+  sku_name            = "standard"
+  
+  tags = {
+    Environment = "development"
+    Project     = var.project
+  }
+}
