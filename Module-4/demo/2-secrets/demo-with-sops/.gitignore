@@ -1,0 +1,8 @@
+# Ignore unencrypted secrets
+adminpassword.json
+
+# Terraform files
+*.tfstate
+*.tfstate.*
+.terraform/
+.terraform.lock.hcl
