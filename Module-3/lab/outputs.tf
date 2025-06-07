@@ -1,16 +1,24 @@
-# Storage Account outputs (using for_each)
+# Storage Account outputs (using for_each) - shows different configurations
 output "storage_accounts_for_each" {
-  description = "Map of storage account names (for_each example)"
+  description = "Map of storage account names and their configurations (for_each example)"
   value = {
-    for key, sa in module.storage_account_for_each : key => sa.storage_account_name
+    for key, sa in module.storage_account_for_each : key => {
+      name = sa.storage_account_name
+      # Shows how for_each allows different configurations
+      purpose = key == "logs" ? "Log storage (Standard/LRS)" : "Data storage (Premium/ZRS)"
+    }
   }
 }
 
-# Key Vault outputs (using count)
+# Key Vault outputs (using count) - shows identical configurations
 output "key_vaults_count" {
-  description = "List of Key Vault names (count example)"
+  description = "List of Key Vault names (count example) - all identical"
   value = [
-    for kv in module.key_vault_count : kv.key_vault_name
+    for i, kv in module.key_vault_count : {
+      index = i
+      name  = kv.key_vault_name
+      note  = "All Key Vaults have identical configuration (limitation of count)"
+    }
   ]
 }
 
@@ -18,9 +26,20 @@ output "key_vaults_count" {
 output "count_vs_for_each_explanation" {
   description = "Explanation of the differences between count and for_each"
   value = {
-    count_explanation = "With count, we get a list/array of resources indexed by numbers (0, 1, 2, etc.)"
-    for_each_explanation = "With for_each, we get a map of resources indexed by the keys we provide"
-    count_access_pattern = "Access using: module.key_vault_count[0], module.key_vault_count[1], etc."
-    for_each_access_pattern = "Access using: module.storage_account_for_each['one'], module.storage_account_for_each['two'], etc."
+    for_each_advantages = {
+      "Meaningful keys" = "Access using: module.storage_account_for_each['logs'], module.storage_account_for_each['data']"
+      "Different configs" = "Each storage account can have different tier/replication based on purpose"
+      "Stable references" = "Adding/removing items doesn't affect other resources"
+    }
+    count_limitations = {
+      "Numeric indexes" = "Access using: module.key_vault_count[0], module.key_vault_count[1]"
+      "Identical configs" = "All Key Vaults have the same configuration (hard to vary)"
+      "Index dependency" = "Removing middle item causes recreation of subsequent items"
+    }
+    demonstration = {
+      "logs_storage" = "Standard tier, LRS replication (cheaper for logs)"
+      "data_storage" = "Premium tier, ZRS replication (better for important data)"
+      "all_keyvaults" = "Identical configuration (can't easily differentiate by purpose with count)"
+    }
   }
 }

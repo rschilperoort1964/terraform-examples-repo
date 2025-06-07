@@ -24,6 +24,12 @@ variable "key_vault_count" {
   default     = 2
 }
 
+variable "key_vault_purposes" {
+  type        = list(string)
+  description = "List of purposes for Key Vaults (for demonstration)"
+  default     = ["secrets", "certificates", "keys"]
+}
+
 variable "tenant_id" {
   type        = string
   description = "Azure Active Directory tenant ID"

@@ -10,29 +10,40 @@ This configuration creates:
 
 ## Key Differences
 
-### Using `count`
+### Using `for_each` (Storage Accounts)
+- Creates resources based on a **set or map of meaningful identifiers**
+- Resources are indexed by **string keys** ("logs", "data")
+- Access pattern: `module.storage_account_for_each["logs"]`, `module.storage_account_for_each["data"]`
+- **Each resource can have different configurations** based on its purpose
+- **Advantage**: You can add/remove items without affecting other resources
+- **Configuration varies by purpose**:
+  - "logs" storage: Standard tier, LRS replication (cheaper for log storage)
+  - "data" storage: Premium tier, GRS replication (better performance and redundancy)
+
+### Using `count` (Key Vaults)
 - Creates resources based on a **numeric value**
 - Resources are indexed by **integers** (0, 1, 2, ...)
 - Access pattern: `module.key_vault_count[0]`, `module.key_vault_count[1]`
-- Good for creating a simple number of identical resources
+- **All resources get identical configuration** (limitation of count)
 - **Limitation**: If you remove an item from the middle, Terraform will recreate resources to maintain the index order
-
-### Using `for_each`
-- Creates resources based on a **set or map**
-- Resources are indexed by **string keys**
-- Access pattern: `module.storage_account_for_each["one"]`, `module.storage_account_for_each["two"]`
-- Good for creating resources with meaningful identifiers
-- **Advantage**: You can add/remove items without affecting other resources
+- **All Key Vaults are identical** - harder to configure them differently
 
 ## Example Resources Created
 
 ### Development Environment
-- Storage Accounts: `satfadvdevone`, `satfadvdevtwo`
-- Key Vaults: `kv-tfadv-dev-1`, `kv-tfadv-dev-2`
+- **Storage Accounts with different configurations**:
+  - `satfadvdevlogs`: Standard tier, LRS replication (for logs)
+  - `satfadvdevdata`: Premium tier, GRS replication (for data)
+- **Key Vaults with identical configuration**:
+  - `kv-tfadv-dev-1`: Standard SKU, basic settings
+  - `kv-tfadv-dev-2`: Standard SKU, basic settings (identical to first)
 
 ### Production Environment
-- Storage Accounts: `satfadvprodone`, `satfadvprodtwo`
-- Key Vaults: `kv-tfadv-prod-1`, `kv-tfadv-prod-2`, `kv-tfadv-prod-3`
+- **Storage Accounts with different configurations**:
+  - `satfadvprodlogs`: Standard tier, LRS replication (for logs)
+  - `satfadvproddata`: Premium tier, GRS replication (for data)
+- **Key Vaults with identical configuration**:
+  - `kv-tfadv-prod-1`, `kv-tfadv-prod-2`, `kv-tfadv-prod-3`: All identical
 - Additional storage containers created only in prod
 
 ## Usage
@@ -56,16 +67,19 @@ terraform apply -var-file="prod.tfvars"
 
 ## When to Use What
 
-### Use `count` when:
-- You need a simple number of identical resources
-- The resources don't need meaningful identifiers
-- You're okay with potential recreation if the count changes
-
 ### Use `for_each` when:
-- You have a known set of resource identifiers
+- You have **meaningful identifiers** for your resources ("logs", "data", "frontend", "backend")
+- You want **different configurations** per resource based on purpose
 - You want to avoid resource recreation when adding/removing items
 - You need to reference resources by meaningful keys
-- You're working with complex resource configurations that vary per instance
+- **Example**: Different storage accounts for different purposes with different performance requirements
+
+### Use `count` when:
+- You need a simple number of **identical resources**
+- The resources don't need meaningful identifiers beyond numbers
+- You're okay with all resources having the same configuration
+- You're okay with potential recreation if the count changes
+- **Example**: Multiple identical Key Vaults for redundancy in different regions
 
 ## Files Structure
 
