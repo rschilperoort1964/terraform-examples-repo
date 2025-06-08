@@ -1,4 +1,3 @@
-
 variable "password" {
   type      = string
   ephemeral = true
@@ -13,9 +12,15 @@ terraform {
   }
 }
 
+provider "azurerm" {
+  features {}
+}
+
+data "azurerm_client_config" "current" {}
+
 resource "azurerm_resource_group" "rg" {
   name     = "myResourceGroup"
-  location = "westus"
+  location = "northeurope"
 }
 
 resource "azurerm_key_vault" "keyvault" {
@@ -30,21 +35,22 @@ resource "azurerm_key_vault" "keyvault" {
   sku_name                    = "standard"
 }
 
+resource "azurerm_role_assignment" "key_vault_secrets_officer" {
+  scope                = azurerm_key_vault.keyvault.id
+  role_definition_name = "Key Vault Secrets Officer"
+  principal_id         = data.azurerm_client_config.current.object_id
+}
+
 resource "azurerm_key_vault_secret" "store_secret" {
   name         = "SecretPassword"
-  value        = var.password
+  value        = "static-secret-value"
   key_vault_id = azurerm_key_vault.keyvault.id
+  
+  depends_on = [azurerm_role_assignment.key_vault_secrets_officer]
 }
 
-ephemeral "azurerm_key_vault_secret" "password" {
-  name         = "password"
-  key_vault_id = azurerm_key_vault.keyvault.id
-}
-
-provider "azurerm" {
-  features {}
-
-  alias = "secondary"
-
-  client_secret = ephemeral.azurerm_key_vault_secret.password.value
+# Example of using ephemeral variable in a local value that won't be persisted
+# This demonstrates ephemeral variables without creating outputs
+locals {
+  ephemeral_password_length = length(var.password)
 }

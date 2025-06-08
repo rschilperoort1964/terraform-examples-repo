@@ -22,14 +22,34 @@ resource "random_password" "admin_password" {
   min_special = 1
 }
 
-resource "azurerm_postgresql_server" "example" {
-  name                         = "psql-module3"
-  location                     = azurerm_resource_group.rg.location
+resource "random_string" "server_suffix" {
+  length  = 8
+  special = false
+  upper   = false
+}
+
+resource "azurerm_mssql_server" "example" {
+  name                         = "sql-module3-${random_string.server_suffix.result}"
   resource_group_name          = azurerm_resource_group.rg.name
+  location                     = azurerm_resource_group.rg.location
+  version                      = "12.0"
   administrator_login          = var.admin_username
-  administrator_login_password = "Password1234!"
-  sku_name                     = "B_Gen5_1"
-  version                      = 11
-  ssl_enforcement_enabled      = true
+  administrator_login_password = random_password.admin_password.result
+
+  tags = {
+    environment = "demo"
+  }
+}
+
+resource "azurerm_mssql_database" "example" {
+  name           = "sqldb-module3"
+  server_id      = azurerm_mssql_server.example.id
+  collation      = "SQL_Latin1_General_CP1_CI_AS"
+  license_type   = "LicenseIncluded"
+  sku_name       = "Basic"
+
+  tags = {
+    environment = "demo"
+  }
 }
 
