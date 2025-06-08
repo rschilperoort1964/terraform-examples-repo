@@ -1,0 +1,92 @@
+name: Terraform CI
+
+on:
+  pull_request:
+    branches: [ main ]
+    paths:
+      - 'Module-5/github/**'
+
+env:
+  TERRAFORM_VERSION: '1.1.7'
+  WORKING_DIRECTORY: './Module-5/github'
+  PROJECT_NAME: 'estfdemo'
+  ENVIRONMENT: 'dev'
+  LOCATION: 'westeurope'
+
+jobs:
+  validate-and-plan:
+    name: Validate and Plan
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+
+    - name: Setup Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.9'
+
+    - name: Setup Terraform
+      uses: hashicorp/setup-terraform@v3
+      with:
+        terraform_version: ${{ env.TERRAFORM_VERSION }}
+
+    - name: Install TFLint
+      run: |
+        curl -s https://raw.githubusercontent.com/terraform-linters/tflint/master/install_linux.sh | bash
+        tflint --version
+
+    - name: Install TFSec  
+      run: |
+        curl -s https://raw.githubusercontent.com/aquasecurity/tfsec/master/scripts/install_linux.sh | bash
+        tfsec --version
+
+    - name: Install pre-commit
+      run: |
+        python3 -m pip install --upgrade pip
+        python3 -m pip install pre-commit
+        pre-commit install
+        pre-commit --version
+
+    - name: Run pre-commit
+      run: pre-commit run --all-files
+      working-directory: ${{ env.WORKING_DIRECTORY }}
+
+    - name: Azure Login
+      uses: azure/login@v1
+      with:
+        creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+    - name: Terraform Init
+      run: |
+        terraform init \
+          -backend-config="resource_group_name=rg-${{ env.PROJECT_NAME }}-terra-${{ env.ENVIRONMENT }}" \
+          -backend-config="storage_account_name=st${{ env.PROJECT_NAME }}terra${{ env.ENVIRONMENT }}" \
+          -backend-config="container_name=terraformstate" \
+          -backend-config="key=terraform.tfstate"
+      working-directory: ${{ env.WORKING_DIRECTORY }}
+
+    - name: Terraform Format Check
+      run: terraform fmt -check -recursive
+      working-directory: ${{ env.WORKING_DIRECTORY }}
+
+    - name: Terraform Validate
+      run: terraform validate
+      working-directory: ${{ env.WORKING_DIRECTORY }}
+
+    - name: Terraform Plan
+      run: |
+        terraform plan \
+          -var-file=./config/${{ env.ENVIRONMENT }}.tfvars \
+          -out=${{ env.ENVIRONMENT }}-tf.plan \
+          -detailed-exitcode \
+          -lock=false
+      working-directory: ${{ env.WORKING_DIRECTORY }}
+
+    - name: Upload Plan Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: terraform-plan-${{ env.ENVIRONMENT }}
+        path: ${{ env.WORKING_DIRECTORY }}/${{ env.ENVIRONMENT }}-tf.plan
+        retention-days: 30
