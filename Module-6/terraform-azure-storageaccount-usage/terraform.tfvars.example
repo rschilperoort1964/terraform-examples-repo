@@ -1,0 +1,5 @@
+# Example terraform.tfvars file
+# Copy this to terraform.tfvars and customize the values
+
+location             = "West Europe"
+storage_account_name = "youruniquestorageacc"  # Must be globally unique, 3-24 chars, lowercase letters and numbers only
